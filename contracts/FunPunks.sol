@@ -1,39 +1,32 @@
-//SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
-import "@openzeppelin/contracts/finance/PaymentSplitter.sol";
+import "@openzeppelin/contracts/utils/Strings.sol";
 import "./Base64.sol";
 import "./FunPunksDNA.sol";
 
-contract FunPunks is ERC721, ERC721Enumerable, PaymentSplitter, FunPunksDNA {
+contract FunPunks is ERC721, ERC721Enumerable, FunPunksDNA {
     using Counters for Counters.Counter;
+    using Strings for uint256;
 
     Counters.Counter private _idCounter;
-    uint256 public maxSuply;
+    uint256 public maxSupply;
     mapping(uint256 => uint256) public tokenDNA;
 
-    constructor(
-        address[] memory _payees,
-        uint256[] memory _shares,
-        uint256 _maxSuply
-    ) payable ERC721("FunPunks", "FNPKS") PaymentSplitter(_payees, _shares) {
-        maxSuply = _maxSuply;
+    constructor(uint256 _maxSupply) ERC721("FunPunks", "FNPKS") {
+        maxSupply = _maxSupply;
     }
 
     function mint() public {
-        // require(
-        //     msg.value >= 50000000000000000,
-        //     "you neet 0.05 ETH to mint the FunPunks"
-        // );
-        // _idCounter.increment();
         uint256 current = _idCounter.current();
-        require(current < maxSuply, "No FunPunks left to mint");
+        require(current < maxSupply, "No FunPunks left :(");
 
         tokenDNA[current] = deterministicPseudoRandomDNA(current, msg.sender);
         _safeMint(msg.sender, current);
+        _idCounter.increment();
     }
 
     function _baseURI() internal pure override returns (string memory) {
@@ -42,35 +35,46 @@ contract FunPunks is ERC721, ERC721Enumerable, PaymentSplitter, FunPunksDNA {
 
     function _paramsURI(uint256 _dna) internal view returns (string memory) {
         string memory params;
-        params = string(abi.encodePacked(
-            "accessoriesType=",
-            getAccessoriesType(_dna),
-            "&clotheColor=",
-            getClotheColor(_dna),
-            "&clotheType=",
-            getClotheType(_dna),
-            "&eyeType=",
-            getEyeType(_dna),
-            "&eyebrowType=",
-            getEyeBrowType(_dna),
-            "&facialHairColor=",
-            getFacialHairColor(_dna),
-            "&facialHairType=",
-            getFacialHairType(_dna),
-            "&hairColor=",
-            getHairColor(_dna),
-            "&hatColor=",
-            getHatColor(_dna),
-            "&graphicType=",
-            getGraphicType(_dna),
-            "&mouthType=",
-            getMouthType(_dna),
-            "&skinColor=",
-            getSkinColor(_dna),
-            "&topType=",
-            getTopType(_dna)
-        ));
-        return params;
+
+        {
+            params = string(
+                abi.encodePacked(
+                    "accessoriesType=",
+                    getAccessoriesType(_dna),
+                    "&clotheColor=",
+                    getClotheColor(_dna),
+                    "&clotheType=",
+                    getClotheType(_dna),
+                    "&eyeType=",
+                    getEyeType(_dna),
+                    "&eyebrowType=",
+                    getEyeBrowType(_dna),
+                    "&facialHairColor=",
+                    getFacialHairColor(_dna),
+                    "&facialHairType=",
+                    getFacialHairType(_dna),
+                    "&hairColor=",
+                    getHairColor(_dna),
+                    "&hatColor=",
+                    getHatColor(_dna),
+                    "&graphicType=",
+                    getGraphicType(_dna),
+                    "&mouthType=",
+                    getMouthType(_dna),
+                    "&skinColor=",
+                    getSkinColor(_dna)
+                )
+            );
+        }
+
+        return string(abi.encodePacked(params, "&topType=", getTopType(_dna)));
+    }
+
+    function imageByDNA(uint256 _dna) public view returns (string memory) {
+        string memory baseURI = _baseURI();
+        string memory paramsURI = _paramsURI(_dna);
+
+        return string(abi.encodePacked(baseURI, "?", paramsURI));
     }
 
     function tokenURI(uint256 tokenId)
@@ -81,23 +85,27 @@ contract FunPunks is ERC721, ERC721Enumerable, PaymentSplitter, FunPunksDNA {
     {
         require(
             _exists(tokenId),
-            "ERC721 Metadata; URI query for nonexistent token"
+            "ERC721 Metadata: URI query for nonexistent token"
         );
+
+        uint256 dna = tokenDNA[tokenId];
+        string memory image = imageByDNA(dna);
+
         string memory jsonURI = Base64.encode(
             abi.encodePacked(
                 '{ "name": "FunPunks #',
-                tokenId,
-                '", "description": "An incredible NFT collection", "image": "',
-                "// TODO: Calculate image URL",
-                '"attributes": [{"Accessories Type": "Blank", "Clothe Color": "Red", "Clothe Type": "Hoodie", "Eye Type": "Default", "Eyebrow Type": "Default"}]',
+                tokenId.toString(),
+                '", "description": "Fun Punks are randomized Avataaars stored on chain ", "image": "',
+                image,
                 '"}'
             )
         );
+
         return
-            string(abi.encodePacked("data:application/json;base64", jsonURI));
+            string(abi.encodePacked("data:application/json;base64,", jsonURI));
     }
 
-    //Override require
+    // Override required
     function _beforeTokenTransfer(
         address from,
         address to,

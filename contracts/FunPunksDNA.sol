@@ -1,4 +1,5 @@
-//SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
+
 pragma solidity ^0.8.0;
 
 contract FunPunksDNA {
@@ -200,16 +201,20 @@ contract FunPunksDNA {
         "ShortHairTheCaesarSidePart"
     ];
 
-    // this pseudo random function is determinisc and should not be used on production
-    function deterministicPseudoRandomDNA(uint256 _tokenId, address _minter) public pure  returns(uint256) {
-      uint256 combinedParams = _tokenId + uint160(_minter);
-      bytes memory encodedParams = abi.encodePacked(combinedParams);
-      bytes32 hashedParams = keccak256(encodedParams);
+    // This pseudo random function is determistic and should not be used on production
+    function deterministicPseudoRandomDNA(uint256 _tokenId, address _minter)
+        public
+        pure
+        returns (uint256)
+    {
+        uint256 combinedParams = _tokenId + uint160(_minter);
+        bytes memory encodedParams = abi.encodePacked(combinedParams);
+        bytes32 hashedParams = keccak256(encodedParams);
 
-      return uint256(hashedParams);
+        return uint256(hashedParams);
     }
 
-    //Get attributes
+    // Get attributes
     uint8 constant ADN_SECTION_SIZE = 2;
 
     function _getDNASection(uint256 _dna, uint8 _rightDiscard)
@@ -229,12 +234,12 @@ contract FunPunksDNA {
         view
         returns (string memory)
     {
-        uint256 dnaSection = _getDNASection(_dna, 0);
+        uint8 dnaSection = _getDNASection(_dna, 0);
         return _accessoriesType[dnaSection % _accessoriesType.length];
     }
 
     function getClotheColor(uint256 _dna) public view returns (string memory) {
-        uint256 dnaSection = _getDNASection(_dna, 2);
+        uint8 dnaSection = _getDNASection(_dna, 2);
         return _clotheColor[dnaSection % _clotheColor.length];
     }
 
@@ -252,6 +257,7 @@ contract FunPunksDNA {
         uint256 dnaSection = _getDNASection(_dna, 8);
         return _eyebrowType[dnaSection % _eyebrowType.length];
     }
+
     function getFacialHairColor(uint256 _dna)
         public
         view
